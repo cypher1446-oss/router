@@ -41,4 +41,10 @@ app.get("/q", async (req, res) => {
 });
 
 app.get("/dq", async (req, res) => {
-  await logStatus(req.query.pid, req.query.uid, "duplicate"
+  await logStatus(req.query.pid, req.query.uid, "duplicate", req);
+  res.send("Duplicate / blocked.");
+});
+
+app.listen(3000, () => {
+  console.log("Server running on port 3000");
+});

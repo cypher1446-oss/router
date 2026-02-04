@@ -18,7 +18,7 @@ async function logStatus(pid, uid, status, req) {
     body: JSON.stringify({
       pid: pid || "0",
       uid: uid || "no_uid",
-      status,
+      status: status,
       ip: req.headers["x-forwarded-for"] || req.socket.remoteAddress,
       useragent: req.headers["user-agent"],
     }),
@@ -26,4 +26,19 @@ async function logStatus(pid, uid, status, req) {
 }
 
 app.get("/c", async (req, res) => {
-  await logStatus(req.query.pid, req.query.uid, "comple
+  await logStatus(req.query.pid, req.query.uid, "complete", req);
+  res.send("Thank you. Survey complete.");
+});
+
+app.get("/t", async (req, res) => {
+  await logStatus(req.query.pid, req.query.uid, "terminate", req);
+  res.send("You did not qualify.");
+});
+
+app.get("/q", async (req, res) => {
+  await logStatus(req.query.pid, req.query.uid, "quota_full", req);
+  res.send("Quota full.");
+});
+
+app.get("/dq", async (req, res) => {
+  await logStatus(req.query.pid, req.query.uid, "duplicate"

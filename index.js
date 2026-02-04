@@ -1,50 +1,83 @@
-const express = require("express");
-const fetch = require("node-fetch");
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Opinion Insights Admin</title>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; background:#f4f6f8; }
+    .card { background:#fff; padding:15px 25px; margin:10px; display:inline-block;
+            border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); font-size:18px;}
+    table { border-collapse: collapse; width:100%; margin-top:20px; background:#fff;}
+    th, td { border:1px solid #ddd; padding:8px; text-align:left;}
+    th { background:#eee; }
+  </style>
+</head>
+<body>
 
-const app = express();
+<h2>Opinion Insights — Survey Dashboard</h2>
+<div id="stats"></div>
 
-const SUPABASE_URL = "https://lurbxgmvbmlanmzwhkio.supabase.co";
-const SUPABASE_KEY = "sb_publishable_9P9VH5VPeyUhh2gCoqzgJg_7haX2lvi";
+<table>
+  <thead>
+    <tr>
+      <th>PID</th>
+      <th>UID</th>
+      <th>Status</th>
+      <th>Time</th>
+    </tr>
+  </thead>
+  <tbody id="tbody"></tbody>
+</table>
 
-async function logStatus(pid, uid, status, req) {
-  await fetch(`${SUPABASE_URL}/rest/v1/responses`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      Prefer: "return=minimal"
-    },
-    body: JSON.stringify({
-      pid: pid || "0",
-      uid: uid || "no_uid",
-      status: status,
-      ip: req.headers["x-forwarded-for"] || req.socket.remoteAddress,
-      useragent: req.headers["user-agent"],
-    }),
+<script>
+const { createClient } = window.supabase;
+
+const supabase = createClient(
+  "https://lurbxgmvbmlanmzwhkio.supabase.co",
+  "sb_publishable_9P9VH5VPeyUhh2gCoqzgJg_7haX2lvi"
+);
+
+async function load() {
+  const { data, error } = await supabase
+    .from('responses')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if(error){
+    console.log(error);
+    return;
+  }
+
+  let c=0,t=0,q=0,d=0;
+  let rows = "";
+
+  data.forEach(r=>{
+    if(r.status==="complete") c++;
+    if(r.status==="terminate") t++;
+    if(r.status==="quota_full") q++;
+    if(r.status==="duplicate") d++;
+
+    rows += `<tr>
+      <td>${r.pid}</td>
+      <td>${r.uid}</td>
+      <td>${r.status}</td>
+      <td>${new Date(r.created_at).toLocaleString()}</td>
+    </tr>`;
   });
+
+  document.getElementById("stats").innerHTML = `
+    <div class="card">Complete: ${c}</div>
+    <div class="card">Terminate: ${t}</div>
+    <div class="card">Quota Full: ${q}</div>
+    <div class="card">Duplicate: ${d}</div>
+  `;
+
+  document.getElementById("tbody").innerHTML = rows;
 }
 
-app.get("/c", async (req, res) => {
-  await logStatus(req.query.pid, req.query.uid, "complete", req);
-  res.send("Thank you. Survey complete.");
-});
+load();
+setInterval(load, 5000);
+</script>
 
-app.get("/t", async (req, res) => {
-  await logStatus(req.query.pid, req.query.uid, "terminate", req);
-  res.send("You did not qualify.");
-});
-
-app.get("/q", async (req, res) => {
-  await logStatus(req.query.pid, req.query.uid, "quota_full", req);
-  res.send("Quota full.");
-});
-
-app.get("/dq", async (req, res) => {
-  await logStatus(req.query.pid, req.query.uid, "duplicate", req);
-  res.send("Duplicate / blocked.");
-});
-
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
-});
+</body>
+</html>
